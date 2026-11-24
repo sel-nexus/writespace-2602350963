@@ -98,7 +98,8 @@ describe('reading and navigation', () => {
     expect(screen.getByRole('link', { name: 'Edit New story' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Edit Old story' })).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: 'Edit Old story' }));
-    expect(screen.getByText(/not available in the access-only build/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit post' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Title')).toHaveValue('Old story');
     expect(JSON.parse(localStorage.getItem('writespace_posts'))).toEqual(posts);
   });
 
@@ -115,7 +116,7 @@ describe('reading and navigation', () => {
     renderApp('/blogs', writer, []);
     expect(screen.getByRole('heading', { name: 'No posts yet' })).toBeInTheDocument();
     await user.click(screen.getAllByRole('link', { name: 'Write a post' })[0]);
-    expect(screen.getByText(/not available in the access-only build/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Write a post' })).toBeInTheDocument();
   });
 
   it('does not replace malformed storage or call it empty', () => {

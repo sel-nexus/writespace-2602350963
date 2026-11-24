@@ -6,6 +6,7 @@ import { Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Home from './pages/Home';
 import ReadBlog from './pages/ReadBlog';
+import WriteBlog from './pages/WriteBlog';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -57,9 +58,9 @@ export default function App() {
         <Route path="/register" element={session ? <Navigate to={getRoleHome(session)} replace /> : <RegisterPage onSession={setSession} />} />
         <Route element={<ProtectedRoute session={session} />}>
           <Route path="/blogs" element={session ? <Home session={session} /> : null} />
-          <Route path="/blog/:id" element={<ReadBlog />} />
-          <Route path="/write" element={accessDestination()} />
-          <Route path="/edit/:id" element={accessDestination()} />
+          <Route path="/blog/:id" element={<ReadBlog session={session} />} />
+          <Route path="/write" element={<WriteBlog key="create" />} />
+          <Route path="/edit/:id" element={<WriteBlog key={location.pathname} />} />
         </Route>
         <Route element={<ProtectedRoute session={session} allowedRoles={['admin']} />}>
           <Route path="/admin" element={accessDestination(true)} />
