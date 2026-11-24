@@ -74,7 +74,7 @@ export function register(form) {
   if (Object.keys(errors).length) return { ok: false, error: 'validation', errors };
   const users = readUsers();
   if (!users.ok) return { ok: false, error: 'storage_read_failed' };
-  if (users.value.some((user) => user && user.username === username)) return { ok: false, error: 'validation', errors: { username: 'This username is already in use.' } };
+  if (users.value.some((user) => user && typeof user.username === 'string' && user.username.toLowerCase() === username.toLowerCase())) return { ok: false, error: 'validation', errors: { username: 'This username is already in use.' } };
   let id;
   try { id = crypto.randomUUID(); }
   catch { return { ok: false, error: 'id_unavailable' }; }
@@ -83,4 +83,65 @@ export function register(form) {
   const session = { userId: id, username, displayName, role: 'user' };
   if (!writeSession(session).ok) return { ok: false, error: 'session_write_failed_account_saved' };
   return { ok: true, user, session, navigateTo: '/blogs' };
+}
+
+/** Read complete, unambiguous account records before an admin mutation. */
+export function readManagedUsers() {
+  const result = readUsers();
+  if (!result.ok) return result;
+  const ids = new Set();
+  const names = new Set();
+  const valid = result.value.every((user) => {
+    if (!user || typeof user !== 'object' || Array.isArray(user)) return false;
+    if (!['id', 'displayName', 'username', 'password', 'createdAt'].every((key) => typeof user[key] === 'string' && user[key].trim())) return false;
+    if (!['admin', 'user'].includes(user.role) || Number.isNaN(Date.parse(user.createdAt))) return false;
+    const name = user.username.toLowerCase();
+    if (ids.has(user.id) || names.has(name)) return false;
+    ids.add(user.id);
+    names.add(name);
+    return true;
+  });
+  return valid ? result : { ok: false, value: [], error: 'malformed' };
+}
+
+/** Create a browser-local account only for the current admin session. */
+export function createAdminManagedUser(form) {
+  const session = readSession();
+  if (!session.ok || !session.value) return { ok: false, error: 'unauthenticated' };
+  if (session.value.role !== 'admin') return { ok: false, error: 'forbidden' };
+  const displayName = typeof form?.displayName === 'string' ? form.displayName.trim() : '';
+  const username = typeof form?.username === 'string' ? form.username.trim() : '';
+  const errors = {};
+  if (!displayName) errors.displayName = 'Display name is required.';
+  if (!username) errors.username = 'Username is required.';
+  else if (username.toLowerCase() === 'admin') errors.username = 'This username is reserved.';
+  if (typeof form?.password !== 'string' || !form.password.trim()) errors.password = 'Password is required.';
+  if (!['admin', 'user'].includes(form?.role)) errors.role = 'Choose a valid role.';
+  if (Object.keys(errors).length) return { ok: false, error: 'validation', errors };
+  const users = readManagedUsers();
+  if (!users.ok) return { ok: false, error: 'storage_read_failed' };
+  if (users.value.some((user) => user.username.toLowerCase() === username.toLowerCase())) return { ok: false, error: 'validation', errors: { username: 'This username is already in use.' } };
+  let id;
+  try { id = crypto.randomUUID(); } catch { return { ok: false, error: 'id_unavailable' }; }
+  if (id === ADMIN.userId || users.value.some((user) => user.id === id)) return { ok: false, error: 'id_unavailable' };
+  const user = { id, displayName, username, password: form.password, role: form.role, createdAt: new Date().toISOString() };
+  if (!writeUsers([...users.value, user]).ok) return { ok: false, error: 'storage_write_failed' };
+  return { ok: true, user, users: [...users.value, user] };
+}
+
+/** Delete a local account after explicit confirmation and fresh checks. */
+export function deleteAdminManagedUser(id, confirmed) {
+  const session = readSession();
+  if (!session.ok || !session.value) return { ok: false, error: 'unauthenticated' };
+  if (session.value.role !== 'admin') return { ok: false, error: 'forbidden' };
+  if (id === ADMIN.userId || id === session.value.userId) return { ok: false, error: 'protected' };
+  if (confirmed !== true) return { ok: false, error: 'cancelled' };
+  const users = readManagedUsers();
+  if (!users.ok) return { ok: false, error: 'storage_read_failed' };
+  const target = users.value.find((user) => user.id === id);
+  if (!target) return { ok: false, error: 'not_found' };
+  if (target.username.toLowerCase() === 'admin') return { ok: false, error: 'protected' };
+  const next = users.value.filter((user) => user.id !== id);
+  if (!writeUsers(next).ok) return { ok: false, error: 'storage_write_failed' };
+  return { ok: true, deletedId: id, users: next };
 }

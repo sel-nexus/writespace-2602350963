@@ -10,6 +10,8 @@ import WriteBlog from './pages/WriteBlog';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import AdminDashboard from './pages/AdminDashboard';
+import UserManagement from './pages/UserManagement';
 import { clearSession, getRoleHome, readSession } from './utils/auth';
 
 /** Render access and reading journeys with future destinations held in place. */
@@ -35,19 +37,6 @@ export default function App() {
     setError('');
   }
 
-  /** Show a truthful holding view until later feature slices add these routes. */
-  function accessDestination(adminOnly = false) {
-    if (!session) return null;
-    return (
-      <main className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
-        <p className="text-sm font-semibold text-indigo-700">Signed in as {session.displayName}</p>
-        <h1 className="mt-4 font-serif text-4xl text-slate-900">{adminOnly ? 'Admin dashboard' : 'Your reading space'}</h1>
-        <p className="mt-4 text-slate-600">This area is not available in the access-only build.</p>
-        <Link to="/" className="mt-6 inline-block font-semibold text-indigo-700 underline">Return home</Link>
-      </main>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-white text-slate-800">
       {session ? <Navbar session={session} onLogout={handleLogout} /> : <PublicNavbar session={session} onLogout={handleLogout} />}
@@ -63,8 +52,8 @@ export default function App() {
           <Route path="/edit/:id" element={<WriteBlog key={location.pathname} />} />
         </Route>
         <Route element={<ProtectedRoute session={session} allowedRoles={['admin']} />}>
-          <Route path="/admin" element={accessDestination(true)} />
-          <Route path="/users" element={accessDestination(true)} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/users" element={session ? <UserManagement session={session} /> : null} />
         </Route>
         <Route path="*" element={<main className="mx-auto max-w-6xl px-5 py-20"><h1 className="text-3xl font-semibold">Page not found</h1><Link to="/" className="mt-4 inline-block text-indigo-700 underline">Return home</Link></main>} />
       </Routes>}

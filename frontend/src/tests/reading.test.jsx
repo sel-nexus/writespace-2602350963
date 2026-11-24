@@ -64,7 +64,8 @@ describe('protected routes', () => {
     expect(screen.queryByRole('heading', { name: 'Welcome back.' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Users' })).toBeInTheDocument();
     if (path === '/blog/new') expect(screen.getByRole('heading', { name: 'New story' })).toBeInTheDocument();
-    if (path === '/admin' || path === '/users') expect(screen.getByRole('heading', { name: 'Admin dashboard' })).toBeInTheDocument();
+    if (path === '/admin') expect(screen.getByRole('heading', { name: 'Admin dashboard' })).toBeInTheDocument();
+    if (path === '/users') expect(screen.getByRole('heading', { name: 'User management' })).toBeInTheDocument();
   });
 });
 
