@@ -53,7 +53,9 @@ export default function UserManagement({ session }) {
     <main className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16" data-revision={revision}>
       <Link to="/admin" className="font-semibold text-indigo-700 underline">Back to dashboard</Link>
       <h1 className="mt-4 font-serif text-4xl text-slate-900">User management</h1>
-      <p className="mt-3 max-w-3xl text-slate-700">Demo only: accounts and plaintext passwords are stored in this browser without encryption. Client-side roles are not security. Never use real passwords or sensitive content.</p>
+      <p className="mt-3 max-w-3xl text-slate-700">
+        Demo only: accounts and plaintext passwords are stored in this browser without encryption. Client-side roles are not security. Never use real passwords or sensitive content.
+      </p>
       <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.7fr)]">
         <section aria-labelledby="accounts-heading">
           <h2 id="accounts-heading" className="font-serif text-2xl text-slate-900">Local accounts</h2>
@@ -72,22 +74,52 @@ export default function UserManagement({ session }) {
               { name: 'password', label: 'Password', type: 'password' },
             ].map(({ name, label, type }) => (
               <div key={name}>
-                <label htmlFor={`admin-${name}`} className="block text-sm font-semibold text-slate-800">{label}</label>
-                <input id={`admin-${name}`} name={name} type={type} value={form[name]} onChange={change} aria-required="true" aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `admin-${name}-error` : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-700" />
-                {errors[name] && <p id={`admin-${name}-error`} role="alert" className="mt-1 text-sm text-red-700">{errors[name]}</p>}
+                <label htmlFor={`admin-${name}`} className="block text-sm font-semibold text-slate-800">
+                  {label}
+                </label>
+                <input
+                  id={`admin-${name}`}
+                  name={name}
+                  type={type}
+                  value={form[name]}
+                  onChange={change}
+                  aria-required="true"
+                  aria-invalid={Boolean(errors[name])}
+                  aria-describedby={errors[name] ? `admin-${name}-error` : undefined}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-700"
+                />
+                {errors[name] && <p id={`admin-${name}-error`} role="alert" className="mt-1 text-sm text-red-700">
+                  {errors[name]}
+                </p>}
               </div>
             ))}
             <div>
               <label htmlFor="admin-role" className="block text-sm font-semibold text-slate-800">Role</label>
-              <select id="admin-role" name="role" value={form.role} onChange={change} aria-required="true" aria-invalid={Boolean(errors.role)} aria-describedby={errors.role ? 'admin-role-error' : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-700">
+              <select
+                id="admin-role"
+                name="role"
+                value={form.role}
+                onChange={change}
+                aria-required="true"
+                aria-invalid={Boolean(errors.role)}
+                aria-describedby={errors.role ? 'admin-role-error' : undefined}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-700"
+              >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
               </select>
-              {errors.role && <p id="admin-role-error" role="alert" className="mt-1 text-sm text-red-700">{errors.role}</p>}
+              {errors.role && <p id="admin-role-error" role="alert" className="mt-1 text-sm text-red-700">
+                {errors.role}
+              </p>}
             </div>
-            <button type="submit" className="rounded-lg bg-indigo-700 px-4 py-2 font-semibold text-white hover:bg-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700">Create user</button>
+            <button
+              type="submit"
+              className="rounded-lg bg-indigo-700 px-4 py-2 font-semibold text-white hover:bg-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700"
+            >Create user</button>
           </form>
-          {feedback && <p role="status" className="mt-4 text-sm text-slate-700">{feedback}</p>}
+          {feedback && <p role="status" className="mt-4 text-sm text-slate-700">
+            {feedback}
+          </p>}
         </section>
       </div>
     </main>

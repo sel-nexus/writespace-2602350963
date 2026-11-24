@@ -60,24 +60,54 @@ export default function WriteBlog() {
   return (
     <main className="mx-auto max-w-4xl px-5 py-12 sm:px-8 sm:py-16">
       <p className="text-sm font-semibold text-indigo-700">Your writing space</p>
-      <h1 className="mt-3 font-serif text-4xl tracking-tight text-slate-900 sm:text-5xl">{id ? 'Edit post' : 'Write a post'}</h1>
+      <h1 className="mt-3 font-serif text-4xl tracking-tight text-slate-900 sm:text-5xl">
+        {id ? 'Edit post' : 'Write a post'}
+      </h1>
       <p className="mt-3 text-slate-600">Plain text is saved only in this browser. Do not use sensitive content.</p>
       <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
         <div>
           <label htmlFor="post-title" className="block font-semibold text-slate-800">Title</label>
-          <input id="post-title" className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 focus:outline focus:outline-2 focus:outline-indigo-700" value={title} onChange={(event) => setTitle(event.target.value)} aria-required="true" aria-invalid={Boolean(errors.title)} aria-describedby={errors.title ? 'title-error' : undefined} />
-          {errors.title && <p id="title-error" role="alert" className="mt-2 text-sm text-red-700">{errors.title}</p>}
+          <input
+            id="post-title"
+            className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 focus:outline focus:outline-2 focus:outline-indigo-700"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            aria-required="true"
+            aria-invalid={Boolean(errors.title)}
+            aria-describedby={errors.title ? 'title-error' : undefined}
+          />
+          {errors.title && <p id="title-error" role="alert" className="mt-2 text-sm text-red-700">
+            {errors.title}
+          </p>}
         </div>
         <div>
           <label htmlFor="post-content" className="block font-semibold text-slate-800">Content</label>
-          <textarea id="post-content" className="mt-2 min-h-64 w-full rounded-lg border border-slate-300 px-4 py-3 focus:outline focus:outline-2 focus:outline-indigo-700" value={content} onChange={(event) => setContent(event.target.value)} aria-required="true" aria-invalid={Boolean(errors.content)} aria-describedby={errors.content ? 'content-count content-error' : 'content-count'} />
+          <textarea
+            id="post-content"
+            className="mt-2 min-h-64 w-full rounded-lg border border-slate-300 px-4 py-3 focus:outline focus:outline-2 focus:outline-indigo-700"
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            aria-required="true"
+            aria-invalid={Boolean(errors.content)}
+            aria-describedby={errors.content ? 'content-count content-error' : 'content-count'}
+          />
           <p id="content-count" className="mt-2 text-sm text-slate-600">{content.length} characters</p>
-          {errors.content && <p id="content-error" role="alert" className="mt-2 text-sm text-red-700">{errors.content}</p>}
+          {errors.content && <p id="content-error" role="alert" className="mt-2 text-sm text-red-700">
+            {errors.content}
+          </p>}
         </div>
-        {failure && <p role="alert" className="text-red-700">{failure === 'storage_read_failed' ? 'Local posts are unavailable or damaged. Your changes were not saved.' : failure === 'id_unavailable' ? 'A new post ID could not be generated. Your changes were not saved.' : 'Your changes were not saved. Check browser storage and try again.'}</p>}
+        {failure && <p role="alert" className="text-red-700">
+          {failure === 'storage_read_failed' ? 'Local posts are unavailable or damaged. Your changes were not saved.' : failure === 'id_unavailable' ? 'A new post ID could not be generated. Your changes were not saved.' : 'Your changes were not saved. Check browser storage and try again.'}
+        </p>}
         <div className="flex flex-wrap items-center gap-3">
-          <button type="submit" className="rounded-lg bg-indigo-700 px-5 py-3 font-semibold text-white hover:bg-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700">Save post</button>
-          <Link to={id ? `/blog/${encodeURIComponent(id)}` : '/blogs'} className="rounded-lg px-5 py-3 font-semibold text-slate-600 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-700">Cancel</Link>
+          <button
+            type="submit"
+            className="rounded-lg bg-indigo-700 px-5 py-3 font-semibold text-white hover:bg-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700"
+          >Save post</button>
+          <Link
+            to={id ? `/blog/${encodeURIComponent(id)}` : '/blogs'}
+            className="rounded-lg px-5 py-3 font-semibold text-slate-600 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-700"
+          >Cancel</Link>
         </div>
       </form>
     </main>

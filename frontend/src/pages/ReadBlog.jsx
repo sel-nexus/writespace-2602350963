@@ -26,7 +26,12 @@ export default function ReadBlog({ session }) {
   }
   return (
     <main className="mx-auto max-w-4xl px-5 py-12 sm:px-8 sm:py-16">
-      <Link to="/blogs" className="font-semibold text-indigo-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-700">Back to blogs</Link>
+      <Link
+        to="/blogs"
+        className="font-semibold text-indigo-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-700"
+      >
+        Back to blogs
+      </Link>
       {!result.ok ? (
         <p role="status" className="mt-8 text-slate-700">Local posts are unavailable or damaged. Your stored data has not been changed.</p>
       ) : !post || failure === 'not_found' ? (
@@ -44,11 +49,28 @@ export default function ReadBlog({ session }) {
           <div className="mt-10 whitespace-pre-wrap break-words text-lg leading-8 text-slate-700">{post.content}</div>
           {canManagePost(session, post) && (
             <div className="mt-10 flex flex-wrap gap-3">
-              <Link to={`/edit/${encodeURIComponent(post.id)}`} className="rounded-lg border border-indigo-200 px-4 py-2 font-semibold text-indigo-700 hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-700">Edit</Link>
-              <button type="button" onClick={handleDelete} className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 font-semibold text-red-700 hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-700">Delete</button>
+              <Link
+                to={`/edit/${encodeURIComponent(post.id)}`}
+                className="rounded-lg border border-indigo-200 px-4 py-2 font-semibold text-indigo-700 hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-700"
+              >
+                Edit
+              </Link>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 font-semibold text-red-700 hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-700"
+              >
+                Delete
+              </button>
             </div>
           )}
-          {failure && failure !== 'not_found' && <p role="alert" className="mt-4 text-red-700">{failure === 'storage_read_failed' ? 'Local posts are unavailable or damaged. The post was not deleted.' : 'The post was not deleted. Check browser storage and try again.'}</p>}
+          {failure && failure !== 'not_found' && (
+            <p role="alert" className="mt-4 text-red-700">
+              {failure === 'storage_read_failed'
+                ? 'Local posts are unavailable or damaged. The post was not deleted.'
+                : 'The post was not deleted. Check browser storage and try again.'}
+            </p>
+          )}
         </article>
       )}
     </main>

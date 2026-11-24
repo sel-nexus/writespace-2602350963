@@ -40,11 +40,19 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white text-slate-800">
       {session ? <Navbar session={session} onLogout={handleLogout} /> : <PublicNavbar session={session} onLogout={handleLogout} />}
-      {error && <p role="alert" className="bg-red-50 px-5 py-3 text-center text-sm text-red-800">{error}</p>}
+      {error && <p role="alert" className="bg-red-50 px-5 py-3 text-center text-sm text-red-800">
+        {error}
+      </p>}
       {loggingOut && location.pathname !== '/' ? <Navigate to="/" replace /> : <Routes>
         <Route path="/" element={<LandingPage session={session} />} />
-        <Route path="/login" element={session ? <Navigate to={getRoleHome(session)} replace /> : <LoginPage onSession={setSession} />} />
-        <Route path="/register" element={session ? <Navigate to={getRoleHome(session)} replace /> : <RegisterPage onSession={setSession} />} />
+        <Route
+          path="/login"
+          element={session ? <Navigate to={getRoleHome(session)} replace /> : <LoginPage onSession={setSession} />}
+        />
+        <Route
+          path="/register"
+          element={session ? <Navigate to={getRoleHome(session)} replace /> : <RegisterPage onSession={setSession} />}
+        />
         <Route element={<ProtectedRoute session={session} />}>
           <Route path="/blogs" element={session ? <Home session={session} /> : null} />
           <Route path="/blog/:id" element={<ReadBlog session={session} />} />
@@ -55,7 +63,13 @@ export default function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/users" element={session ? <UserManagement session={session} /> : null} />
         </Route>
-        <Route path="*" element={<main className="mx-auto max-w-6xl px-5 py-20"><h1 className="text-3xl font-semibold">Page not found</h1><Link to="/" className="mt-4 inline-block text-indigo-700 underline">Return home</Link></main>} />
+        <Route
+          path="*"
+          element={<main className="mx-auto max-w-6xl px-5 py-20">
+            <h1 className="text-3xl font-semibold">Page not found</h1>
+            <Link to="/" className="mt-4 inline-block text-indigo-700 underline">Return home</Link>
+          </main>}
+        />
       </Routes>}
     </div>
   );

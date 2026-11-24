@@ -43,6 +43,44 @@ describe('post authoring', () => {
     expect(screen.getByRole('heading', { name: 'My note' })).toBeInTheDocument();
   });
 
+  it('saves and displays HTML and script input as literal text', async () => {
+    const user = userEvent.setup();
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const title = '<b>Literal title</b>';
+    const content = '<script>window.alert("executed")</script><img src="x" onerror="window.alert(1)"><strong>Literal body</strong>';
+    renderApp('/write', writer, []);
+    await user.click(screen.getByLabelText('Title'));
+    await user.paste(title);
+    await user.click(screen.getByLabelText('Content'));
+    await user.paste(content);
+    await user.click(screen.getByRole('button', { name: 'Save post' }));
+
+    expect(JSON.parse(localStorage.getItem('writespace_posts'))[0]).toMatchObject({ title, content });
+    const heading = screen.getByRole('heading', { name: title });
+    const body = screen.getByText(content);
+    expect(heading.textContent).toBe(title);
+    expect(body.textContent).toBe(content);
+    expect(heading.querySelector('b')).toBeNull();
+    expect(body.querySelector('script, img, strong')).toBeNull();
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it('saves and displays representative large content without truncation', async () => {
+    const user = userEvent.setup();
+    const content = 'A substantial paragraph of plain text.\n'.repeat(1000) + 'End of post.';
+    renderApp('/write', writer, []);
+    await user.type(screen.getByLabelText('Title'), 'Long post');
+    await user.click(screen.getByLabelText('Content'));
+    await user.paste(content);
+    expect(screen.getByLabelText('Content')).toHaveValue(content);
+    expect(screen.getByText(`${content.length} characters`)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save post' }));
+
+    expect(JSON.parse(localStorage.getItem('writespace_posts'))[0].content).toBe(content);
+    expect(screen.getByRole('heading', { name: 'Long post' })).toBeInTheDocument();
+    expect(screen.getByText(content, { normalizer: (text) => text }).textContent).toBe(content);
+  });
+
   it('cancels create and edit without writing changes', async () => {
     const user = userEvent.setup();
     renderApp('/edit/one');
@@ -60,8 +98,9 @@ describe('post authoring', () => {
 
   it('prefills and edits as admin, retaining identity, metadata, and other fresh records', async () => {
     const user = userEvent.setup();
-    renderApp('/edit/one', admin);
+    renderApp('/edit/one', admin, [original]);
     expect(screen.getByLabelText('Content')).toHaveValue(original.content);
+    expect(JSON.parse(localStorage.getItem('writespace_posts'))).toEqual([original]);
     localStorage.setItem('writespace_posts', JSON.stringify([original, other]));
     await user.clear(screen.getByLabelText('Title'));
     await user.type(screen.getByLabelText('Title'), 'Revised');
@@ -142,6 +181,38 @@ describe('post authoring', () => {
     localStorage.removeItem('writespace_session');
     expect(savePost({ title: 'Changed', content: 'Text' }).error).toBe('unauthenticated');
     expect(deletePost('one').error).toBe('unauthenticated');
+  });
+
+  it.each([
+    ['title', 'omitted', undefined, true],
+    ['title', 'undefined', undefined, false],
+    ['title', 'null', null, false],
+    ['title', 'number', 123, false],
+    ['title', 'boolean', false, false],
+    ['title', 'object', {}, false],
+    ['title', 'array', [], false],
+    ['title', 'empty string', '', false],
+    ['title', 'whitespace', '  \n ', false],
+    ['content', 'omitted', undefined, true],
+    ['content', 'undefined', undefined, false],
+    ['content', 'null', null, false],
+    ['content', 'number', 123, false],
+    ['content', 'boolean', false, false],
+    ['content', 'object', {}, false],
+    ['content', 'array', [], false],
+    ['content', 'empty string', '', false],
+    ['content', 'whitespace', '  \n ', false],
+  ])('rejects %s as %s without changing localStorage', (field, _description, value, omitted) => {
+    localStorage.setItem('writespace_session', JSON.stringify(writer));
+    localStorage.setItem('writespace_posts', JSON.stringify([original, other]));
+    localStorage.setItem('unrelated', 'keep this value');
+    const before = Object.fromEntries(Object.keys(localStorage).sort().map((key) => [key, localStorage.getItem(key)]));
+    const input = { title: 'Valid title', content: 'Valid content', [field]: value };
+    if (omitted) delete input[field];
+    const message = field === 'title' ? 'Title is required.' : 'Content is required.';
+
+    expect(savePost(input)).toEqual({ ok: false, error: 'validation', errors: { [field]: message } });
+    expect(Object.fromEntries(Object.keys(localStorage).sort().map((key) => [key, localStorage.getItem(key)]))).toEqual(before);
   });
 
   it('handles missing edit targets and whitespace-only input without writing', async () => {

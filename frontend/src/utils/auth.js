@@ -42,13 +42,13 @@ export function getRoleHome(session) { return session.role === 'admin' ? '/admin
  * @returns {object} A session and destination, or a classified failure.
  */
 export function login(username, password) {
+  if (typeof username !== 'string' || typeof password !== 'string') return { ok: false, error: 'invalid_credentials' };
   let session;
   if (username === 'admin' && password === 'admin') {
     session = ADMIN;
   } else {
     const users = readUsers();
-    if (!users.ok) return { ok: false, error: 'storage_read_failed' };
-    const user = users.value.find((item) => item && item.username === username && item.password === password && ['admin', 'user'].includes(item.role));
+    const user = (users.ok ? users.value : []).find((item) => item && item.username === username && item.password === password && ['admin', 'user'].includes(item.role));
     if (!user) return { ok: false, error: 'invalid_credentials' };
     session = { userId: user.id, username: user.username, displayName: user.displayName, role: user.role };
     if (![session.userId, session.username, session.displayName].every((value) => typeof value === 'string' && value.trim())) return { ok: false, error: 'invalid_credentials' };
@@ -62,14 +62,14 @@ export function login(username, password) {
  * @returns {object} Created identity or a classified failure.
  */
 export function register(form) {
-  const displayName = form.displayName.trim();
-  const username = form.username.trim();
+  const displayName = typeof form?.displayName === 'string' ? form.displayName.trim() : '';
+  const username = typeof form?.username === 'string' ? form.username.trim() : '';
   const errors = {};
   if (!displayName) errors.displayName = 'Display name is required.';
   if (!username) errors.username = 'Username is required.';
-  if (!form.password) errors.password = 'Password is required.';
-  if (!form.confirmPassword) errors.confirmPassword = 'Confirm your password.';
-  else if (form.password !== form.confirmPassword) errors.confirmPassword = 'Passwords do not match.';
+  if (typeof form?.password !== 'string' || !form.password.trim()) errors.password = 'Password is required.';
+  if (typeof form?.confirmPassword !== 'string' || !form.confirmPassword.trim()) errors.confirmPassword = 'Confirm your password.';
+  else if (!errors.password && form.password !== form.confirmPassword) errors.confirmPassword = 'Passwords do not match.';
   if (username.toLowerCase() === 'admin') errors.username = 'This username is reserved.';
   if (Object.keys(errors).length) return { ok: false, error: 'validation', errors };
   const users = readUsers();
@@ -78,6 +78,7 @@ export function register(form) {
   let id;
   try { id = crypto.randomUUID(); }
   catch { return { ok: false, error: 'id_unavailable' }; }
+  if (id === ADMIN.userId || users.value.some((user) => user && user.id === id)) return { ok: false, error: 'id_unavailable' };
   const user = { id, displayName, username, password: form.password, role: 'user', createdAt: new Date().toISOString() };
   if (!writeUsers([...users.value, user]).ok) return { ok: false, error: 'account_write_failed' };
   const session = { userId: id, username, displayName, role: 'user' };

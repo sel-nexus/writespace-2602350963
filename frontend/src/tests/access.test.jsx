@@ -88,7 +88,7 @@ describe('account operations', () => {
   it('stops after read or account write failure and reports a partial session failure', () => {
     localStorage.setItem('writespace_users', 'bad');
     expect(register(form).error).toBe('storage_read_failed');
-    expect(login('ada', 'demo').error).toBe('storage_read_failed');
+    expect(login('ada', 'demo')).toEqual({ ok: false, error: 'invalid_credentials' });
     localStorage.removeItem('writespace_users');
     const original = Storage.prototype.setItem;
     const setter = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (key, value) {
@@ -105,6 +105,133 @@ describe('account operations', () => {
     expect(readUsers().value).toHaveLength(1);
     expect(readSession().value).toBeNull();
     expect(login('admin', 'admin').error).toBe('session_write_failed');
+  });
+
+  it.each([
+    ['displayName', 'Display name is required.'],
+    ['username', 'Username is required.'],
+    ['password', 'Password is required.'],
+    ['confirmPassword', 'Confirm your password.'],
+  ])('rejects a missing %s without writing an account or session', (field, message) => {
+    const input = { ...form };
+    delete input[field];
+    expect(register(input)).toMatchObject({ ok: false, error: 'validation', errors: { [field]: message } });
+    expect(readUsers().value).toEqual([]);
+    expect(readSession().value).toBeNull();
+  });
+
+  it.each(['displayName', 'username', 'password', 'confirmPassword'])('rejects invalid %s types at the registration boundary', (field) => {
+    for (const value of [null, 123, {}, true, []]) {
+      const result = register({ ...form, [field]: value });
+      expect(result).toMatchObject({ ok: false, error: 'validation' });
+      expect(result.errors).toHaveProperty(field);
+      expect(readUsers().value).toEqual([]);
+      expect(readSession().value).toBeNull();
+    }
+  });
+
+  it.each([null, undefined, 4, 'bad', []])('rejects invalid registration form %s without crashing', (input) => {
+    expect(register(input)).toMatchObject({ ok: false, error: 'validation' });
+    expect(readUsers().value).toEqual([]);
+    expect(readSession().value).toBeNull();
+  });
+
+  it('rejects blank values, mismatched confirmation, reserved and duplicate names without writing', () => {
+    for (const field of ['displayName', 'username', 'password', 'confirmPassword']) {
+      expect(register({ ...form, [field]: '   ' })).toMatchObject({ ok: false, error: 'validation', errors: { [field]: expect.any(String) } });
+    }
+    expect(register({ ...form, confirmPassword: 'other' })).toEqual({ ok: false, error: 'validation', errors: { confirmPassword: 'Passwords do not match.' } });
+    expect(register({ ...form, username: ' AdMiN ' })).toEqual({ ok: false, error: 'validation', errors: { username: 'This username is reserved.' } });
+    expect(register(form).ok).toBe(true);
+    const saved = localStorage.getItem('writespace_users');
+    const session = localStorage.getItem('writespace_session');
+    expect(register({ ...form, username: ' ADA ' })).toEqual({ ok: false, error: 'validation', errors: { username: 'This username is already in use.' } });
+    expect(localStorage.getItem('writespace_users')).toBe(saved);
+    expect(localStorage.getItem('writespace_session')).toBe(session);
+  });
+
+  it('handles a UUID generation exception without writing', () => {
+    vi.spyOn(crypto, 'randomUUID').mockImplementation(() => { throw new Error('unavailable'); });
+    expect(register(form)).toEqual({ ok: false, error: 'id_unavailable' });
+    expect(localStorage.getItem('writespace_users')).toBeNull();
+    expect(localStorage.getItem('writespace_session')).toBeNull();
+  });
+
+  it.each(['existing-id', 'admin-fixed'])('refuses a generated ID collision with %s without writing', (id) => {
+    writeUsers([{ id: 'existing-id', username: 'existing' }]);
+    writeSession({ userId: 'existing-id', username: 'existing', displayName: 'Existing', role: 'user' });
+    const users = localStorage.getItem('writespace_users');
+    const session = localStorage.getItem('writespace_session');
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue(id);
+    expect(register(form)).toEqual({ ok: false, error: 'id_unavailable' });
+    expect(localStorage.getItem('writespace_users')).toBe(users);
+    expect(localStorage.getItem('writespace_session')).toBe(session);
+  });
+
+  it.each(['bad', '{}'])('uses an empty login collection for malformed users %s and preserves data', (raw) => {
+    localStorage.setItem('writespace_users', raw);
+    expect(login('ada', 'demo')).toEqual({ ok: false, error: 'invalid_credentials' });
+    expect(register(form)).toEqual({ ok: false, error: 'storage_read_failed' });
+    expect(localStorage.getItem('writespace_users')).toBe(raw);
+    expect(localStorage.getItem('writespace_session')).toBeNull();
+  });
+
+  it('treats an inaccessible user read as empty for login but refuses registration writes', () => {
+    const original = Storage.prototype.getItem;
+    const setter = vi.spyOn(Storage.prototype, 'setItem');
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function (key) {
+      if (key === 'writespace_users') throw new Error('blocked');
+      return original.call(this, key);
+    });
+    expect(login('ada', 'demo')).toEqual({ ok: false, error: 'invalid_credentials' });
+    expect(register(form)).toEqual({ ok: false, error: 'storage_read_failed' });
+    expect(setter).not.toHaveBeenCalled();
+    expect(readSession().value).toBeNull();
+  });
+
+  it('rejects invalid login input and incomplete stored identities without a session', () => {
+    writeUsers([{ id: 'id', username: 123, password: true, displayName: 'Ada', role: 'user' }, { id: '', username: 'ada', password: 'demo', displayName: 'Ada', role: 'user' }]);
+    expect(login(123, true)).toEqual({ ok: false, error: 'invalid_credentials' });
+    expect(login(null, null)).toEqual({ ok: false, error: 'invalid_credentials' });
+    expect(login('ada', 'demo')).toEqual({ ok: false, error: 'invalid_credentials' });
+    expect(readSession().value).toBeNull();
+  });
+
+  it('reports a stored-user login session write failure without altering the account', () => {
+    expect(register(form).ok).toBe(true);
+    clearSession();
+    const saved = localStorage.getItem('writespace_users');
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+    expect(login('ada', 'demo')).toEqual({ ok: false, error: 'session_write_failed' });
+    expect(localStorage.getItem('writespace_users')).toBe(saved);
+    expect(readSession().value).toBeNull();
+  });
+
+  it('allows the fixed admin login even when the user collection is unreadable', () => {
+    localStorage.setItem('writespace_users', 'bad');
+    expect(login('admin', 'admin')).toMatchObject({ ok: true, navigateTo: '/admin', session: { userId: 'admin-fixed' } });
+    expect(localStorage.getItem('writespace_users')).toBe('bad');
+    expect(readSession().value.userId).toBe('admin-fixed');
+  });
+
+  it('accepts stored admin roles and rejects unknown roles without creating a session', () => {
+    writeUsers([{ id: 'a', username: 'ada', password: 'demo', displayName: 'Ada', role: 'admin' }]);
+    expect(login('ada', 'demo')).toMatchObject({ ok: true, navigateTo: '/admin', session: { role: 'admin' } });
+    clearSession();
+    writeUsers([{ id: 'a', username: 'ada', password: 'demo', displayName: 'Ada', role: 'other' }]);
+    expect(login('ada', 'demo')).toEqual({ ok: false, error: 'invalid_credentials' });
+    expect(readSession().value).toBeNull();
+  });
+
+  it('preserves existing users and session when the account write fails', () => {
+    writeUsers([{ id: 'existing-id', username: 'existing' }]);
+    writeSession({ userId: 'existing-id', username: 'existing', displayName: 'Existing', role: 'user' });
+    const users = localStorage.getItem('writespace_users');
+    const session = localStorage.getItem('writespace_session');
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+    expect(register(form)).toEqual({ ok: false, error: 'account_write_failed' });
+    expect(localStorage.getItem('writespace_users')).toBe(users);
+    expect(localStorage.getItem('writespace_session')).toBe(session);
   });
 });
 

@@ -28,7 +28,7 @@ test('mobile reader navigates seeded posts and logs out without changing them', 
   await expect(cards.nth(0)).not.toContainText('hidden in preview');
   await expect(page.getByRole('link', { name: 'Edit Recent story' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Edit Earlier story' })).toHaveCount(0);
-  await page.getByRole('link', { name: 'Recent story' }).click();
+  await page.getByRole('link', { name: 'Recent story', exact: true }).click();
   await expect(page).toHaveURL(/\/blog\/new$/);
   await expect(page.getByText('  second line')).toHaveCSS('white-space', 'pre-wrap');
   await page.reload();
@@ -45,22 +45,36 @@ test('mobile reader navigates seeded posts and logs out without changing them', 
   expect(errors).toEqual([]);
 });
 
-test('guest preview redirects and admin can see all edit actions and missing posts', async ({ page }) => {
+test('guest preview redirects and admin can see all edit actions', async ({ page }) => {
   const errors = [];
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/');
   await page.evaluate((records) => localStorage.setItem('writespace_posts', JSON.stringify(records)), posts);
   await page.reload();
-  await page.getByRole('link', { name: 'Recent story' }).click();
+  await page.getByRole('link', { name: 'Recent story', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await page.evaluate((session) => localStorage.setItem('writespace_session', JSON.stringify(session)), admin);
-  await page.goto('/blogs');
+  await page.getByLabel('Username').fill('admin');
+  await page.getByLabel('Password').fill('admin');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.getByRole('link', { name: 'All blogs' }).click();
   await expect(page.getByRole('link', { name: 'Edit Earlier story' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Edit Recent story' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('a direct link to a missing post shows a recovery link', async ({ page }) => {
+  const errors = [];
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.addInitScript(({ session, records }) => {
+    localStorage.setItem('writespace_session', JSON.stringify(session));
+    localStorage.setItem('writespace_posts', JSON.stringify(records));
+  }, { session: admin, records: posts });
   await page.goto('/blog/not-here');
   await expect(page.getByRole('heading', { name: 'Post not found' })).toBeVisible();
   await page.getByRole('link', { name: 'Back to blogs' }).click();
-  await expect(page.getByRole('link', { name: 'Recent story' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Recent story', exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
